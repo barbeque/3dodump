@@ -23,8 +23,8 @@ The volume header describes the disc.
 | u8     | 5               | Sync bytes (appear to always be 5A) |
 | u8     | 1               | Record version (seemingly always 1) |
 | u8     | 1               | Volume flags |
-| u8     | 32              | Volume comment, unterminated padded ASCII |
-| u8     | 32              | Volume label, unterminated padded ASCII |
+| u8     | 32              | Volume comment, null-terminated padded ASCII |
+| u8     | 32              | Volume label, null-terminated padded ASCII |
 | u32    | 4               | Volume identifier |
 | u32    | 4               | Block size |
 | u32    | 4               | Block count on disc |
