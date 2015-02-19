@@ -3,6 +3,7 @@ import (
   "encoding/binary"
   //"encoding/hex"
   //"reflect"
+  "bytes"
   "os"
   "fmt"
   //"bufio"
@@ -88,6 +89,13 @@ func main() {
     fmt.Println("Error seeking", err)
   }
   fmt.Println("offset now", off)
+
+  b := make([]byte, 4)
+  _, err = f.Read(b)
+  var bAsInt int32
+  binary.Read(bytes.NewBuffer(b), binary.BigEndian, &bAsInt)
+  fmt.Println("\t Next value should be...", bAsInt)
+  f.Seek(-4, os.SEEK_CUR) // rewind to load
 
   var actual_root DirectoryHeader
   err = binary.Read(f, binary.BigEndian, actual_root) // TODO: Why is this not listening to Seek()?
