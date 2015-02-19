@@ -181,12 +181,16 @@ func main() {
   print_directory_entry(eighth_entry, "8th entry in root directory")
   print_blobs(eighth_entry_blobs)
 
-  for i := 0; i < 5; i++ {
+  for i := 0; i < 2; i++ {
     next_entry, next_blobs := read_directory_entry(f)
     print_directory_entry(next_entry, strconv.Itoa(i + 9) + "th entry in root directory")
     print_blobs(next_blobs)
   }
 
-  // TODO: How the hell do I know when I'm out of entries for a directory?
-  // first unused byte??
+  // Only 10 entries in this directory.. so let's see how many bytes we've covered
+  final_byte_location, err := f.Seek(0, os.SEEK_CUR)
+  fmt.Println("We are now at byte", final_byte_location)
+  fmt.Println("(aka", (final_byte_location - directory_start), "bytes since the start of the root dir.)")
+
+  // CONFIRMED: First unused byte is how you figure out how long a directory is.
 }
