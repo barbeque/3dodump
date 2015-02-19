@@ -16,11 +16,23 @@ func check(e error) {
   }
 }
 
-func read_directory_entry(file io.Reader) DirectoryEntry {
+func read_directory_entry(file io.Reader) (DirectoryEntry, []uint32) {
   var entry DirectoryEntry
   err := binary.Read(file, binary.BigEndian, &entry)
   check(err)
-  return entry
+
+  // Blobs are separate from the entry since they are of
+  // variable length and I'm not sure how to tell binary.Read about that
+  // right now.
+  total_blob_count := int(entry.NumberOfCopies) + 1
+  blobs := make([]uint32, total_blob_count)
+
+  // Read the blob pointers - copies AND the original.
+  for i := 0; i < total_blob_count; i++ {
+    binary.Read(file, binary.BigEndian, &blobs[i])
+  }
+
+  return entry, blobs
 }
 
 func print_directory_entry(entry DirectoryEntry, name string) {
@@ -129,16 +141,16 @@ func main() {
 
   // The offset to first directory entry is almost always 0x14 - 20. The size of the header.
   // So just keep reading.
-  first_entry := read_directory_entry(f)
+  first_entry, first_entry_blobs := read_directory_entry(f)
   print_directory_entry(first_entry, "First entry in root directory")
-  // Read in the 'actual data' offset... see what it looks like
-  var blob_address uint32
-  binary.Read(f, binary.BigEndian, &blob_address)
-  fmt.Println("\tData blob starts at block", blob_address)
-
-  fmt.Println()
+  for i, b := range first_entry_blobs {
+    fmt.Println("\tBlob", i, "at block", b)
+  }
 
   // Eat another file... is it really this easy?
-  second_entry := read_directory_entry(f)
+  second_entry, second_entry_blobs := read_directory_entry(f)
   print_directory_entry(second_entry,  "Second entry in root directory")
+  for i, b := range second_entry_blobs {
+    fmt.Println("\tBlob", i, "at block", b)
+  }
 }
