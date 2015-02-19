@@ -6,6 +6,7 @@ import (
   //"bytes"
   "os"
   "fmt"
+  "io"
   //"bufio"
 )
 
@@ -15,8 +16,28 @@ func check(e error) {
   }
 }
 
+func read_directory_entry(file io.Reader) DirectoryEntry {
+  var entry DirectoryEntry
+  err := binary.Read(file, binary.BigEndian, &entry)
+  check(err)
+  return entry
+}
+
+func print_directory_entry(entry DirectoryEntry, name string) {
+  fmt.Print("Directory entry '", name, "'\n")
+  fmt.Println("\tFlags", entry.Flags)
+  fmt.Println("\tIdentifier", entry.Identifier)
+  fmt.Println("\tEntry Type", string(entry.EntryType[:]))
+  fmt.Println("\tBlock size", entry.BlockSize) // Why is this duplicated everywhere??
+  fmt.Println("\tFile name", string(entry.FileName[:]))
+  fmt.Println("\tLength in bytes", entry.ByteLength)
+  fmt.Println("\tLength in blocks", entry.BlockLength)
+  fmt.Println("\tNumber of copies", entry.NumberOfCopies)
+  fmt.Println()
+}
+
 type VolumeHeader struct {
-  RecordType            byte
+  RecordType            byte      // Must use PascalCase to get 'exported'.
   SynchronizationBytes  [5]byte
   RecordVersion byte
   VolumeFlags byte
@@ -108,18 +129,8 @@ func main() {
 
   // The offset to first directory entry is almost always 0x14 - 20. The size of the header.
   // So just keep reading.
-  var first_entry DirectoryEntry
-  err = binary.Read(f, binary.BigEndian, &first_entry)
-  check(err)
-  fmt.Println("Entry for first item in root directory")
-  fmt.Println("\tFlags", first_entry.Flags)
-  fmt.Println("\tIdentifier", first_entry.Identifier)
-  fmt.Println("\tEntry Type", string(first_entry.EntryType[:]))
-  fmt.Println("\tBlock size", first_entry.BlockSize) // Why is this duplicated everywhere??
-  fmt.Println("\tFile name", string(first_entry.FileName[:]))
-  fmt.Println("\tLength in bytes", first_entry.ByteLength)
-  fmt.Println("\tLength in blocks", first_entry.BlockLength)
-  fmt.Println("\tNumber of copies", first_entry.NumberOfCopies)
+  first_entry := read_directory_entry(f)
+  print_directory_entry(first_entry, "First entry in root directory")
   // Read in the 'actual data' offset... see what it looks like
   var blob_address uint32
   binary.Read(f, binary.BigEndian, &blob_address)
@@ -128,16 +139,6 @@ func main() {
   fmt.Println()
 
   // Eat another file... is it really this easy?
-  var second_entry DirectoryEntry
-  err = binary.Read(f, binary.BigEndian, &second_entry)
-  check(err)
-  fmt.Println("Entry for second item in root directory")
-  fmt.Println("\tFlags", second_entry.Flags)
-  fmt.Println("\tIdentifier", second_entry.Identifier)
-  fmt.Println("\tEntry Type", string(second_entry.EntryType[:]))
-  fmt.Println("\tBlock size", second_entry.BlockSize) // Why is this duplicated everywhere??
-  fmt.Println("\tFile name", string(second_entry.FileName[:]))
-  fmt.Println("\tLength in bytes", second_entry.ByteLength)
-  fmt.Println("\tLength in blocks", second_entry.BlockLength)
-  fmt.Println("\tNumber of copies", second_entry.NumberOfCopies)
+  second_entry := read_directory_entry(f)
+  print_directory_entry(second_entry,  "Second entry in root directory")
 }
