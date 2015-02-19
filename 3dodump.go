@@ -3,7 +3,7 @@ import (
   "encoding/binary"
   //"encoding/hex"
   //"reflect"
-  "bytes"
+  //"bytes"
   "os"
   "fmt"
   //"bufio"
@@ -36,11 +36,11 @@ type RootDirectoryHeader struct {
 }
 
 type DirectoryHeader struct {
-  NextBlockInThisDirectory int32
-  PreviousBlockInThisDirectory int32
-  DirectoryFlags uint32
-  OffsetToFirstUnusedByte uint32
-  OffsetToFirstDirectoryEntry uint32
+  NextBlockInThisDirectory      int32
+  PreviousBlockInThisDirectory  int32
+  DirectoryFlags                uint32
+  OffsetToFirstUnusedByte       uint32
+  OffsetToFirstDirectoryEntry   uint32
 }
 
 type DirectoryEntry struct {
@@ -90,18 +90,23 @@ func main() {
   }
   fmt.Println("offset now", off)
 
-  b := make([]byte, 4)
-  _, err = f.Read(b)
-  var bAsInt int32
-  binary.Read(bytes.NewBuffer(b), binary.BigEndian, &bAsInt)
-  fmt.Println("\t Next value should be...", bAsInt)
-  f.Seek(-4, os.SEEK_CUR) // rewind to load
-
   var actual_root DirectoryHeader
-  err = binary.Read(f, binary.BigEndian, actual_root) // TODO: Why is this not listening to Seek()?
+  err = binary.Read(f, binary.BigEndian, &actual_root)
+  check(err)
   fmt.Println("Next root block", actual_root.NextBlockInThisDirectory)
   fmt.Println("Prev. root block", actual_root.PreviousBlockInThisDirectory)
   fmt.Println("Root dir flags", actual_root.DirectoryFlags)
   fmt.Println("Offset to first free byte in root dir", actual_root.OffsetToFirstUnusedByte)
-  fmt.Println("Actual root directory offset to first entry", actual_root.OffsetToFirstDirectoryEntry)
+  fmt.Println("Offset to first entry", actual_root.OffsetToFirstDirectoryEntry)
+
+  // The offset to first directory entry is almost always 0x14 - 20. The size of the header.
+  // So just keep reading.
+  var first_entry DirectoryEntry
+  err = binary.Read(f, binary.BigEndian, &first_entry)
+  check(err)
+  fmt.Println("Flags", first_entry.Flags)
+  fmt.Println("Identifier", first_entry.Identifier)
+  fmt.Println("Entry Type", string(first_entry.EntryType[:]))
+  fmt.Println("Block size", first_entry.BlockSize) // Why is this duplicated everywhere??
+  fmt.Println("File name", string(first_entry.FileName[:]))
 }
