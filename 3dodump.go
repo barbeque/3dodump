@@ -90,7 +90,7 @@ func main() {
   fmt.Println("offset now", off)
 
   var actual_root DirectoryHeader
-  err = binary.Read(f, binary.BigEndian, actual_root)
+  err = binary.Read(f, binary.BigEndian, actual_root) // TODO: Why is this not listening to Seek()?
   fmt.Println("Next root block", actual_root.NextBlockInThisDirectory)
   fmt.Println("Prev. root block", actual_root.PreviousBlockInThisDirectory)
   fmt.Println("Root dir flags", actual_root.DirectoryFlags)
