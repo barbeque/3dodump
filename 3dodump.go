@@ -109,4 +109,26 @@ func main() {
   fmt.Println("Entry Type", string(first_entry.EntryType[:]))
   fmt.Println("Block size", first_entry.BlockSize) // Why is this duplicated everywhere??
   fmt.Println("File name", string(first_entry.FileName[:]))
+  fmt.Println("Length in bytes", first_entry.ByteLength)
+  fmt.Println("Length in blocks", first_entry.BlockLength)
+  fmt.Println("Number of copies", first_entry.NumberOfCopies)
+  // Skip over the 'actual data' offset... see what it looks like
+  var blob_address uint32
+  binary.Read(f, binary.BigEndian, &blob_address)
+  fmt.Println("Blob starts at", blob_address)
+
+  fmt.Println()
+
+  // Eat another file... is it really this easy?
+  var second_entry DirectoryEntry
+  err = binary.Read(f, binary.BigEndian, &second_entry)
+  check(err)
+  fmt.Println("Flags", second_entry.Flags)
+  fmt.Println("Identifier", second_entry.Identifier)
+  fmt.Println("Entry Type", string(second_entry.EntryType[:]))
+  fmt.Println("Block size", second_entry.BlockSize) // Why is this duplicated everywhere??
+  fmt.Println("File name", string(second_entry.FileName[:]))
+  fmt.Println("Length in bytes", second_entry.ByteLength)
+  fmt.Println("Length in blocks", second_entry.BlockLength)
+  fmt.Println("Number of copies", second_entry.NumberOfCopies)
 }
