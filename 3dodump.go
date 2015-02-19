@@ -75,47 +75,55 @@ func main() {
   fmt.Println("# of copies", rdh.NumberOfCopies)
   fmt.Println("Root block size", rdh.RootBlockSize)
 
-  for _, copy_offset := range rdh.OffsetsOfCopies {
-    fmt.Println("Offset", copy_offset)
+  fmt.Println("Root blocks can be found at:")
+  for idx, copy_offset := range rdh.OffsetsOfCopies {
+    fmt.Print("\tBlock ", copy_offset)
+    if idx == 0 {
+      fmt.Println(" (original)")
+    } else {
+      fmt.Println(" (copy)")
+    }
   }
 
   // Find the root offset. It'll be the root directory's first copy offset * the size of a block
   directory_start := int64(rdh.OffsetsOfCopies[0] * vh.BlockSize)
-  fmt.Println("Root directory should start at offset", directory_start)
+  fmt.Println("Root directory should start at byte", directory_start)
 
   // Read from that offset. Note: binary is a little weird here.
   off, err := f.Seek(directory_start, os.SEEK_SET)
   if err != nil {
     fmt.Println("Error seeking", err)
   }
-  fmt.Println("offset now", off)
+  fmt.Println("Seeked to", off)
 
   var actual_root DirectoryHeader
   err = binary.Read(f, binary.BigEndian, &actual_root)
   check(err)
-  fmt.Println("Next root block", actual_root.NextBlockInThisDirectory)
-  fmt.Println("Prev. root block", actual_root.PreviousBlockInThisDirectory)
-  fmt.Println("Root dir flags", actual_root.DirectoryFlags)
-  fmt.Println("Offset to first free byte in root dir", actual_root.OffsetToFirstUnusedByte)
-  fmt.Println("Offset to first entry", actual_root.OffsetToFirstDirectoryEntry)
+  fmt.Println("Directory header of root")
+  fmt.Println("\tNext root block", actual_root.NextBlockInThisDirectory)
+  fmt.Println("\tPrev. root block", actual_root.PreviousBlockInThisDirectory)
+  fmt.Println("\tRoot dir flags", actual_root.DirectoryFlags)
+  fmt.Println("\tOffset to first free byte in root dir", actual_root.OffsetToFirstUnusedByte)
+  fmt.Println("\tOffset to first entry", actual_root.OffsetToFirstDirectoryEntry)
 
   // The offset to first directory entry is almost always 0x14 - 20. The size of the header.
   // So just keep reading.
   var first_entry DirectoryEntry
   err = binary.Read(f, binary.BigEndian, &first_entry)
   check(err)
-  fmt.Println("Flags", first_entry.Flags)
-  fmt.Println("Identifier", first_entry.Identifier)
-  fmt.Println("Entry Type", string(first_entry.EntryType[:]))
-  fmt.Println("Block size", first_entry.BlockSize) // Why is this duplicated everywhere??
-  fmt.Println("File name", string(first_entry.FileName[:]))
-  fmt.Println("Length in bytes", first_entry.ByteLength)
-  fmt.Println("Length in blocks", first_entry.BlockLength)
-  fmt.Println("Number of copies", first_entry.NumberOfCopies)
-  // Skip over the 'actual data' offset... see what it looks like
+  fmt.Println("Entry for first item in root directory")
+  fmt.Println("\tFlags", first_entry.Flags)
+  fmt.Println("\tIdentifier", first_entry.Identifier)
+  fmt.Println("\tEntry Type", string(first_entry.EntryType[:]))
+  fmt.Println("\tBlock size", first_entry.BlockSize) // Why is this duplicated everywhere??
+  fmt.Println("\tFile name", string(first_entry.FileName[:]))
+  fmt.Println("\tLength in bytes", first_entry.ByteLength)
+  fmt.Println("\tLength in blocks", first_entry.BlockLength)
+  fmt.Println("\tNumber of copies", first_entry.NumberOfCopies)
+  // Read in the 'actual data' offset... see what it looks like
   var blob_address uint32
   binary.Read(f, binary.BigEndian, &blob_address)
-  fmt.Println("Blob starts at", blob_address)
+  fmt.Println("\tData blob starts at block", blob_address)
 
   fmt.Println()
 
@@ -123,12 +131,13 @@ func main() {
   var second_entry DirectoryEntry
   err = binary.Read(f, binary.BigEndian, &second_entry)
   check(err)
-  fmt.Println("Flags", second_entry.Flags)
-  fmt.Println("Identifier", second_entry.Identifier)
-  fmt.Println("Entry Type", string(second_entry.EntryType[:]))
-  fmt.Println("Block size", second_entry.BlockSize) // Why is this duplicated everywhere??
-  fmt.Println("File name", string(second_entry.FileName[:]))
-  fmt.Println("Length in bytes", second_entry.ByteLength)
-  fmt.Println("Length in blocks", second_entry.BlockLength)
-  fmt.Println("Number of copies", second_entry.NumberOfCopies)
+  fmt.Println("Entry for second item in root directory")
+  fmt.Println("\tFlags", second_entry.Flags)
+  fmt.Println("\tIdentifier", second_entry.Identifier)
+  fmt.Println("\tEntry Type", string(second_entry.EntryType[:]))
+  fmt.Println("\tBlock size", second_entry.BlockSize) // Why is this duplicated everywhere??
+  fmt.Println("\tFile name", string(second_entry.FileName[:]))
+  fmt.Println("\tLength in bytes", second_entry.ByteLength)
+  fmt.Println("\tLength in blocks", second_entry.BlockLength)
+  fmt.Println("\tNumber of copies", second_entry.NumberOfCopies)
 }
