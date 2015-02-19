@@ -7,6 +7,7 @@ import (
   "os"
   "fmt"
   "io"
+  "strconv"
   //"bufio"
 )
 
@@ -46,6 +47,12 @@ func print_directory_entry(entry DirectoryEntry, name string) {
   fmt.Println("\tLength in blocks", entry.BlockLength)
   fmt.Println("\tNumber of copies", entry.NumberOfCopies)
   fmt.Println()
+}
+
+func print_blobs(blob_block_pointers []uint32) {
+  for i, b := range blob_block_pointers {
+    fmt.Println("\tBlob", i, "at block", b)
+  }
 }
 
 type VolumeHeader struct {
@@ -143,14 +150,43 @@ func main() {
   // So just keep reading.
   first_entry, first_entry_blobs := read_directory_entry(f)
   print_directory_entry(first_entry, "First entry in root directory")
-  for i, b := range first_entry_blobs {
-    fmt.Println("\tBlob", i, "at block", b)
-  }
+  print_blobs(first_entry_blobs)
 
   // Eat another file... is it really this easy?
   second_entry, second_entry_blobs := read_directory_entry(f)
   print_directory_entry(second_entry,  "Second entry in root directory")
-  for i, b := range second_entry_blobs {
-    fmt.Println("\tBlob", i, "at block", b)
+  print_blobs(second_entry_blobs)
+
+  third_entry, third_entry_blobs := read_directory_entry(f)
+  print_directory_entry(third_entry, "Third entry in root directory")
+  print_blobs(third_entry_blobs)
+
+  fourth_entry, fourth_entry_blobs := read_directory_entry(f)
+  print_directory_entry(fourth_entry, "Fourth entry in root directory")
+  print_blobs(fourth_entry_blobs)
+
+  fifth_entry, fifth_entry_blobs := read_directory_entry(f)
+  print_directory_entry(fifth_entry, "Fifth entry in root directory")
+  print_blobs(fifth_entry_blobs)
+
+  sixth_entry, sixth_entry_blobs := read_directory_entry(f)
+  print_directory_entry(sixth_entry, "Sixth entry in root directory")
+  print_blobs(sixth_entry_blobs)
+
+  seventh_entry, seventh_entry_blobs := read_directory_entry(f)
+  print_directory_entry(seventh_entry, "Seventh entry in root directory")
+  print_blobs(seventh_entry_blobs)
+
+  eighth_entry, eighth_entry_blobs := read_directory_entry(f)
+  print_directory_entry(eighth_entry, "8th entry in root directory")
+  print_blobs(eighth_entry_blobs)
+
+  for i := 0; i < 5; i++ {
+    next_entry, next_blobs := read_directory_entry(f)
+    print_directory_entry(next_entry, strconv.Itoa(i + 9) + "th entry in root directory")
+    print_blobs(next_blobs)
   }
+
+  // TODO: How the hell do I know when I'm out of entries for a directory?
+  // first unused byte??
 }
