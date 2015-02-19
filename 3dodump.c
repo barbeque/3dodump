@@ -6,6 +6,7 @@ typedef unsigned char u8;
 typedef unsigned int u32;
 typedef signed int s32;
 
+// Note: assuming we're always on X86-something.
 #define SWAP_UINT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
 
 u8 next_u8(FILE* fp) {
@@ -76,7 +77,18 @@ int main(int argc, char* argv[]) {
 	u32 root_directory_id = next_u32(fp);
 	u32 root_directory_block_count = next_u32(fp);
 	u32 last_copy_of_root_directory = next_u32(fp);
+	printf("Root dir id %i, root dir block count %i, last copy of root directory is id %i\n", root_directory_id, root_directory_block_count, last_copy_of_root_directory);
 	// 32 x u32 [locations of root directory copies]
+	u32 root_copies[32];
+	printf("Root directory copies at: ");
+	for(unsigned int i = 0; i < 32; ++i) {
+		root_copies[i] = next_u32(fp);
+		printf("%i", root_copies[i]);
+		if(i + 1 < 32) {
+			printf(", ");
+		}
+	}
+	printf("\n");
 
 	fclose(fp);
 	return 0;
