@@ -17,6 +17,13 @@ func check(e error) {
   }
 }
 
+func read_directory_header(file io.Reader) DirectoryHeader {
+  var header DirectoryHeader
+  err := binary.Read(file, binary.BigEndian, &header)
+  check(err)
+  return header
+}
+
 func read_directory_entry(file io.Reader) (DirectoryEntry, []uint32) {
   var entry DirectoryEntry
   err := binary.Read(file, binary.BigEndian, &entry)
@@ -40,6 +47,15 @@ func read_directory_entry(file io.Reader) (DirectoryEntry, []uint32) {
   }
 
   return entry, blobs
+}
+
+func print_directory_header(header DirectoryHeader, name string) {
+  fmt.Print("Directory header for '", name , "'\n")
+  fmt.Println("\tNext block", header.NextBlockInThisDirectory)
+  fmt.Println("\tPrev. block", header.PreviousBlockInThisDirectory)
+  fmt.Println("\tRoot dir flags", header.DirectoryFlags)
+  fmt.Println("\tOffset to first free byte in dir", header.OffsetToFirstUnusedByte)
+  fmt.Println("\tOffset to first entry", header.OffsetToFirstDirectoryEntry)
 }
 
 func print_directory_entry(entry DirectoryEntry, name string) {
@@ -151,15 +167,8 @@ func main() {
   }
   fmt.Println("Seeked to", off)
 
-  var actual_root DirectoryHeader
-  err = binary.Read(f, binary.BigEndian, &actual_root)
-  check(err)
-  fmt.Println("Directory header of root")
-  fmt.Println("\tNext root block", actual_root.NextBlockInThisDirectory)
-  fmt.Println("\tPrev. root block", actual_root.PreviousBlockInThisDirectory)
-  fmt.Println("\tRoot dir flags", actual_root.DirectoryFlags)
-  fmt.Println("\tOffset to first free byte in root dir", actual_root.OffsetToFirstUnusedByte)
-  fmt.Println("\tOffset to first entry", actual_root.OffsetToFirstDirectoryEntry)
+  actual_root := read_directory_header(f)
+  print_directory_header(actual_root, "Root directory")
 
   // The offset to first directory entry is almost always 0x14 - 20. The size of the header.
   // So just keep reading.
@@ -212,9 +221,14 @@ func main() {
   // OK, now that we've stumbled onto something useful, let's take an entry we know
   // is a directory entry and try to find its header.
   // third_entry is "IronManData" on our test ISO.
-  loc, err := f.Seek(int64(third_entry_blobs[0] * vh.BlockSize) + 20, os.SEEK_SET) // Why +20?
+  _, err = f.Seek(int64(third_entry_blobs[0] * vh.BlockSize), os.SEEK_SET)
   check(err)
-  fmt.Println("Seeked to IronManData directory (loc in bytes", loc, ")")
+
+  // Read a directory header out, I guess.
+  iron_man_header := read_directory_header(f)
+  print_directory_header(iron_man_header, "IronManData header")
+
+  // Now read the entries (20 bytes later...)
   first_iron_man_entry, first_iron_man_blobs := read_directory_entry(f)
   print_directory_entry(first_iron_man_entry, "First entry in IronManData")
   print_blobs(first_iron_man_blobs)
