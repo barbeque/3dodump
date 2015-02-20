@@ -233,4 +233,15 @@ func main() {
   for i, tuple := range iron_man_entries {
     print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData directory")
   }
+
+  // Now let's hunt for another directory
+  qt_entry_in_iron_man, error := iron_man_entries.find_entry_by_name("QT")
+  check(error)
+
+  _, err = f.Seek(int64(qt_entry_in_iron_man.BlobPointers[0] * vh.BlockSize), os.SEEK_SET)
+  check(err)
+  qt_entries := read_all_entries_from_directory(f)
+  for i, tuple := range qt_entries {
+    print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData/QT directory")
+  }
 }
