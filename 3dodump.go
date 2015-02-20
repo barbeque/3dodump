@@ -239,4 +239,27 @@ func main() {
   for i, tuple := range qt_entries {
     print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData/QT directory")
   }
+
+  // Fuck you, I want slug.stream, give it to me.
+  slug_entry, error := qt_entries.find_entry_by_name("slug.stream")
+  check(error)
+  slug_block_location := slug_entry.BlobPointers[0]
+  slug_real_location := int64(slug_block_location * vh.BlockSize)
+  f.Seek(slug_real_location, os.SEEK_SET)
+
+  out, err := os.Create("/tmp/slug.stream")
+  check(err)
+  defer out.Close()
+
+  fmt.Printf("Writing slug.stream to /tmp/slug.stream...")
+
+  // Read from file for the specified byte length
+  for i := 0; i < int(slug_entry.Entry.ByteLength); i++ {
+    b := make([]byte, 1) // not efficient but we'll get to that later
+    _, err = f.Read(b)
+    check(err)
+
+    _, err = out.Write(b)
+    check(err)
+  }
 }
