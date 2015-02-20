@@ -8,6 +8,7 @@ import (
   "fmt"
   "strconv"
   "io"
+  "strings"
   //"bufio"
 )
 
@@ -17,13 +18,13 @@ func check(e error) {
   }
 }
 
-func read_all_entries_from_directory(file io.Reader) []DirectoryEntryTuple {
+func read_all_entries_from_directory(file io.Reader) DirectoryIterationResult {
   // Assuming reader has started at the HEADER for the directory.
   // Scan ahead 20 bytes.
   _ = read_directory_header(file) // throw it away.
   // Now read directory entries until the cows come home
   entry, blobs := read_directory_entry(file)
-  result := []DirectoryEntryTuple{ DirectoryEntryTuple{ Entry: entry, BlobPointers: blobs}}
+  result := DirectoryIterationResult{ DirectoryEntryTuple{ Entry: entry, BlobPointers: blobs}}
 
   for !flag_is_last_entry_in_directory(entry.Flags) {
     entry, blobs = read_directory_entry(file)
@@ -153,6 +154,27 @@ type DirectoryEntryTuple struct {
   BlobPointers []uint32 // in blocks.
 }
 
+type FindError struct {
+  s string
+}
+func (e *FindError) Error() string {
+  return e.s
+}
+
+type DirectoryIterationResult []DirectoryEntryTuple
+func (m DirectoryIterationResult) find_entry_by_name(name string) (DirectoryEntryTuple, error) {
+  for _, e := range m {
+    if clean_filename(e.Entry.FileName[:]) == name { // Could this be made shorter?
+      return e, nil
+    }
+  }
+  return DirectoryEntryTuple{}, &FindError{"Not found: '" + name + "'" }
+}
+
+func clean_filename(name_as_bytes []byte) string {
+  return strings.TrimRight(string(name_as_bytes[:]), "\x00")
+}
+
 func main() {
   args := os.Args[1:]
   f, err := os.Open(args[0])
@@ -192,66 +214,23 @@ func main() {
   }
   fmt.Println("Seeked to", off)
 
-  actual_root := read_directory_header(f)
-  print_directory_header(actual_root, "Root directory")
-
-  // The offset to first directory entry is almost always 0x14 - 20. The size of the header.
-  // So just keep reading.
-  first_entry, first_entry_blobs := read_directory_entry(f)
-  print_directory_entry(first_entry, "First entry in root directory")
-  print_blobs(first_entry_blobs)
-
-  // Eat another file... is it really this easy?
-  second_entry, second_entry_blobs := read_directory_entry(f)
-  print_directory_entry(second_entry,  "Second entry in root directory")
-  print_blobs(second_entry_blobs)
-
-  third_entry, third_entry_blobs := read_directory_entry(f)
-  print_directory_entry(third_entry, "Third entry in root directory")
-  print_blobs(third_entry_blobs)
-
-  fourth_entry, fourth_entry_blobs := read_directory_entry(f)
-  print_directory_entry(fourth_entry, "Fourth entry in root directory")
-  print_blobs(fourth_entry_blobs)
-
-  fifth_entry, fifth_entry_blobs := read_directory_entry(f)
-  print_directory_entry(fifth_entry, "Fifth entry in root directory")
-  print_blobs(fifth_entry_blobs)
-
-  sixth_entry, sixth_entry_blobs := read_directory_entry(f)
-  print_directory_entry(sixth_entry, "Sixth entry in root directory")
-  print_blobs(sixth_entry_blobs)
-
-  seventh_entry, seventh_entry_blobs := read_directory_entry(f)
-  print_directory_entry(seventh_entry, "Seventh entry in root directory")
-  print_blobs(seventh_entry_blobs)
-
-  eighth_entry, eighth_entry_blobs := read_directory_entry(f)
-  print_directory_entry(eighth_entry, "8th entry in root directory")
-  print_blobs(eighth_entry_blobs)
-
-  for i := 0; i < 2; i++ {
-    next_entry, next_blobs := read_directory_entry(f)
-    print_directory_entry(next_entry, strconv.Itoa(i + 9) + "th entry in root directory")
-    print_blobs(next_blobs)
+  root_entries := read_all_entries_from_directory(f)
+  for i, tuple := range root_entries {
+    print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the root directory")
   }
 
-  // Only 10 entries in this directory.. so let's see how many bytes we've covered
-  final_byte_location, err := f.Seek(0, os.SEEK_CUR)
-  fmt.Println("We are now at byte", final_byte_location)
-  fmt.Println("(aka", (final_byte_location - directory_start), "bytes since the start of the root dir.)")
+  iron_man_entry_in_root, error := root_entries.find_entry_by_name("IronManData")
+  check(error)
 
-  // CONFIRMED: First unused byte is how you figure out how long a directory is.
-
-  // OK, now that we've stumbled onto something useful, let's take an entry we know
+  // Let's take an entry we know
   // is a directory entry and try to find its header.
   // third_entry is "IronManData" on our test ISO.
-  _, err = f.Seek(int64(third_entry_blobs[0] * vh.BlockSize), os.SEEK_SET)
+  _, err = f.Seek(int64(iron_man_entry_in_root.BlobPointers[0] * vh.BlockSize), os.SEEK_SET)
   check(err)
 
   // Read the entire IronManData directory, header and all
-  entries := read_all_entries_from_directory(f)
-  for i, tuple := range entries {
+  iron_man_entries := read_all_entries_from_directory(f)
+  for i, tuple := range iron_man_entries {
     print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData directory")
   }
 }
