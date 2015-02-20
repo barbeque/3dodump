@@ -67,7 +67,7 @@ The directory entry structure defines something that lives in a directory - for 
 | u32    | 4               | Gap (purpose unknown) |
 | u8     | 32              | File name, null-terminated ASCII |
 | u32    | 4               | Number of copies of this entry's real data |
-| u32    | 4*n             | Variable length structure - offset to original + copies from beginning of disc in blocks |
+| u32    | 4*n             | Variable length structure - offset to original + copies from beginning of disc in blocks. For directories (type *dir) this points to the HEADER of the directory, not the start of the entries (which begin +20 bytes later) |
 
 ### Directory entry flags
 The flag structure appears to contain information on both the least significant bit (LSB) and a mask to aid in directory iteration.
