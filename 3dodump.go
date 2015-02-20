@@ -171,6 +171,15 @@ func (m DirectoryIterationResult) find_entry_by_name(name string) (DirectoryEntr
   return DirectoryEntryTuple{}, &FindError{"Not found: '" + name + "'" }
 }
 
+func get_subdirectory(root DirectoryIterationResult, subdirectory_name string, blockSize uint32, f io.ReadSeeker) DirectoryIterationResult {
+  entry_by_name, error := root.find_entry_by_name(subdirectory_name)
+  check(error)
+  _, error = f.Seek(int64(entry_by_name.BlobPointers[0] * blockSize), os.SEEK_SET)
+  check(error)
+  subdir_entries := read_all_entries_from_directory(f)
+  return subdir_entries
+}
+
 func clean_filename(name_as_bytes []byte) string {
   return strings.TrimRight(string(name_as_bytes[:]), "\x00")
 }
@@ -219,28 +228,14 @@ func main() {
     print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the root directory")
   }
 
-  iron_man_entry_in_root, error := root_entries.find_entry_by_name("IronManData")
-  check(error)
-
-  // Let's take an entry we know
-  // is a directory entry and try to find its header.
-  // third_entry is "IronManData" on our test ISO.
-  _, err = f.Seek(int64(iron_man_entry_in_root.BlobPointers[0] * vh.BlockSize), os.SEEK_SET)
-  check(err)
-
-  // Read the entire IronManData directory, header and all
-  iron_man_entries := read_all_entries_from_directory(f)
+  // Read the IronManData directory
+  iron_man_entries := get_subdirectory(root_entries, "IronManData", vh.BlockSize, f)
   for i, tuple := range iron_man_entries {
     print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData directory")
   }
 
-  // Now let's hunt for another directory
-  qt_entry_in_iron_man, error := iron_man_entries.find_entry_by_name("QT")
-  check(error)
-
-  _, err = f.Seek(int64(qt_entry_in_iron_man.BlobPointers[0] * vh.BlockSize), os.SEEK_SET)
-  check(err)
-  qt_entries := read_all_entries_from_directory(f)
+  // Then the QT directory under it
+  qt_entries := get_subdirectory(iron_man_entries, "QT", vh.BlockSize, f)
   for i, tuple := range qt_entries {
     print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData/QT directory")
   }
