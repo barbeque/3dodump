@@ -21,11 +21,17 @@ func read_directory_entry(file io.Reader) (DirectoryEntry, []uint32) {
   var entry DirectoryEntry
   err := binary.Read(file, binary.BigEndian, &entry)
   check(err)
+  fmt.Println("Read directory entry for", string(entry.FileName[:]))
 
   // Blobs are separate from the entry since they are of
   // variable length and I'm not sure how to tell binary.Read about that
   // right now.
   total_blob_count := int(entry.NumberOfCopies) + 1
+
+  if total_blob_count > 10 {
+    fmt.Println("Error, provided blob pointer count (", total_blob_count, ") is ridiculous. You must not be reading a directory entry.")
+  }
+
   blobs := make([]uint32, total_blob_count)
 
   // Read the blob pointers - copies AND the original.
@@ -202,4 +208,18 @@ func main() {
   fmt.Println("(aka", (final_byte_location - directory_start), "bytes since the start of the root dir.)")
 
   // CONFIRMED: First unused byte is how you figure out how long a directory is.
+
+  // OK, now that we've stumbled onto something useful, let's take an entry we know
+  // is a directory entry and try to find its header.
+  // third_entry is "IronManData" on our test ISO.
+  loc, err := f.Seek(int64(third_entry_blobs[0] * vh.BlockSize) + 20, os.SEEK_SET) // Why +20?
+  check(err)
+  fmt.Println("Seeked to IronManData directory (loc in bytes", loc, ")")
+  first_iron_man_entry, first_iron_man_blobs := read_directory_entry(f)
+  print_directory_entry(first_iron_man_entry, "First entry in IronManData")
+  print_blobs(first_iron_man_blobs)
+
+  second_iron_man_entry, second_iron_man_blobs := read_directory_entry(f)
+  print_directory_entry(second_iron_man_entry, "Second entry in IronManData")
+  print_blobs(second_iron_man_blobs)
 }
