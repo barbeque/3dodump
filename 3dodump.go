@@ -17,6 +17,26 @@ func check(e error) {
   }
 }
 
+func read_all_entries_from_directory(file io.Reader) []DirectoryEntryTuple {
+  // Assuming reader has started at the HEADER for the directory.
+  // Scan ahead 20 bytes.
+  _ = read_directory_header(file) // throw it away.
+  // Now read directory entries until the cows come home
+  entry, blobs := read_directory_entry(file)
+  result := []DirectoryEntryTuple{ DirectoryEntryTuple{ Entry: entry, BlobPointers: blobs}}
+
+  for !flag_is_last_entry_in_directory(entry.Flags) {
+    entry, blobs = read_directory_entry(file)
+    result = append(result, DirectoryEntryTuple{ Entry: entry, BlobPointers: blobs })
+  }
+
+  return result
+}
+
+func flag_is_last_entry_in_directory(flag uint32) bool {
+  return flag & 0x80000000 != 0
+}
+
 func read_directory_header(file io.Reader) DirectoryHeader {
   var header DirectoryHeader
   err := binary.Read(file, binary.BigEndian, &header)
@@ -73,7 +93,7 @@ func print_directory_entry(entry DirectoryEntry, name string) {
   if entry.Flags & 0x40000000 != 0 {
     fmt.Println("\t\tLast entry in block")
   }
-  if entry.Flags & 0x80000000 != 0 {
+  if flag_is_last_entry_in_directory(entry.Flags) {
     fmt.Println("\t\tLast entry in directory")
   }
 
@@ -126,6 +146,11 @@ type DirectoryEntry struct {
   FileName  [32]byte
   NumberOfCopies uint32
   // Offsets of copies is NumberOfCopies * uint32s
+}
+
+type DirectoryEntryTuple struct {
+  Entry DirectoryEntry
+  BlobPointers []uint32 // in blocks.
 }
 
 func main() {
@@ -224,16 +249,9 @@ func main() {
   _, err = f.Seek(int64(third_entry_blobs[0] * vh.BlockSize), os.SEEK_SET)
   check(err)
 
-  // Read a directory header out, I guess.
-  iron_man_header := read_directory_header(f)
-  print_directory_header(iron_man_header, "IronManData header")
-
-  // Now read the entries (20 bytes later...)
-  first_iron_man_entry, first_iron_man_blobs := read_directory_entry(f)
-  print_directory_entry(first_iron_man_entry, "First entry in IronManData")
-  print_blobs(first_iron_man_blobs)
-
-  second_iron_man_entry, second_iron_man_blobs := read_directory_entry(f)
-  print_directory_entry(second_iron_man_entry, "Second entry in IronManData")
-  print_blobs(second_iron_man_blobs)
+  // Read the entire IronManData directory, header and all
+  entries := read_all_entries_from_directory(f)
+  for i, tuple := range entries {
+    print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData directory")
+  }
 }
