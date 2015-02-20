@@ -48,10 +48,10 @@ func print_directory_entry(entry DirectoryEntry, name string) {
   fmt.Println("\tNumber of copies", entry.NumberOfCopies)
 
 
-  if entry.Flags & 0x40000000 == 1 {
+  if entry.Flags & 0x40000000 != 0 {
     fmt.Println("\t\tLast entry in block")
   }
-  if entry.Flags & 0x80000000 == 1{
+  if entry.Flags & 0x80000000 != 0 {
     fmt.Println("\t\tLast entry in directory")
   }
 
