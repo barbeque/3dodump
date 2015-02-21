@@ -184,6 +184,35 @@ func clean_filename(name_as_bytes []byte) string {
   return strings.TrimRight(string(name_as_bytes[:]), "\x00")
 }
 
+func extract_to_disk(entry DirectoryEntryTuple, blockSize uint32, f io.ReadSeeker) {
+  block_location := entry.BlobPointers[0]
+  byte_location := int64(block_location * blockSize)
+
+  // Get current position in volume
+  old_position, _ := f.Seek(0, os.SEEK_CUR)
+
+  // Now move to where the file we want to extract is.
+  f.Seek(byte_location, os.SEEK_SET)
+
+  output_filename := "/tmp/" + clean_filename(entry.Entry.FileName[:])
+  out, err := os.Create(output_filename)
+  check(err)
+  defer out.Close()
+
+  for i := 0; i < int(entry.Entry.ByteLength); i++ {
+    b := make([]byte, 1)
+    _, err := f.Read(b)
+    check(err)
+    _, err = out.Write(b)
+    check(err)
+  }
+
+  fmt.Println("Extracted to", output_filename)
+
+  // Reset the position to where we were before in the volume
+  f.Seek(old_position, os.SEEK_SET)
+}
+
 func main() {
   args := os.Args[1:]
   f, err := os.Open(args[0])
@@ -238,28 +267,7 @@ func main() {
   qt_entries := get_subdirectory(iron_man_entries, "QT", vh.BlockSize, f)
   for i, tuple := range qt_entries {
     print_directory_entry(tuple.Entry, "Number " + strconv.Itoa(i) + " entry in the IronManData/QT directory")
-  }
 
-  // Fuck you, I want slug.stream, give it to me.
-  slug_entry, error := qt_entries.find_entry_by_name("slug.stream")
-  check(error)
-  slug_block_location := slug_entry.BlobPointers[0]
-  slug_real_location := int64(slug_block_location * vh.BlockSize)
-  f.Seek(slug_real_location, os.SEEK_SET)
-
-  out, err := os.Create("/tmp/slug.stream")
-  check(err)
-  defer out.Close()
-
-  fmt.Printf("Writing slug.stream to /tmp/slug.stream...")
-
-  // Read from file for the specified byte length
-  for i := 0; i < int(slug_entry.Entry.ByteLength); i++ {
-    b := make([]byte, 1) // not efficient but we'll get to that later
-    _, err = f.Read(b)
-    check(err)
-
-    _, err = out.Write(b)
-    check(err)
+    extract_to_disk(tuple, vh.BlockSize, f)
   }
 }
